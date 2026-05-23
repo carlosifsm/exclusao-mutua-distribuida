@@ -73,7 +73,7 @@ def processar_mensagem(msg_id: int, process_id: int) -> None:
         print(f"[coord] RELEASE de {process_id}")
         with lock:
             if fila[0] == process_id:
-                fila.popleaft()
+                fila.popleft()
                 tentar_conceder()
             else:
                 print(f"[coord] aviso: RELEASE de {process_id} mas primeiro da fila é {list(fila)[0] if fila else 'vazia'}")

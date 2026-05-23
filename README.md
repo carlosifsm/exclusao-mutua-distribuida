@@ -1,90 +1,50 @@
 # Exclusão Mútua Distribuída — Algoritmo Centralizado
 
-Trabalho de Sistemas Distribuídos usando:
-- sockets TCP;
-- coordenador central;
-- fila FIFO;
-- mensagens REQUEST, GRANT e RELEASE.
+Este trabalho implementa um algoritmo de exclusão mútua distribuída utilizando sockets TCP e um coordenador central responsável por controlar o acesso à região crítica. Os processos clientes se comunicam com o coordenador através das mensagens REQUEST, GRANT e RELEASE, enquanto o coordenador mantém uma fila FIFO para garantir atendimento ordenado.
 
-## Arquivos
+O projeto é composto pelos seguintes arquivos:
 
 | Arquivo | Descrição |
 |---|---|
-| `protocol.py` | Protocolo das mensagens |
-| `coordinator.py` | Coordenador |
-| `client.py` | Processo cliente |
-| `resultado.txt` | Arquivo compartilhado gerado na execução |
+| `protocol.py` | Definição do protocolo de mensagens |
+| `coordinator.py` | Coordenador central |
+| `client.py` | Processos clientes |
+| `resultado.txt` | Arquivo compartilhado gerado durante a execução |
 
----
-
-## Mensagens
-
-Formato:
+As mensagens seguem o formato:
 
 ```text
 MSG_ID|PROCESS_ID|000...
 ```
 
-Tipos:
+Os tipos utilizados são:
+- `1` → REQUEST
+- `2` → GRANT
+- `3` → RELEASE
 
-| ID | Tipo |
-|---|---|
-| 1 | REQUEST |
-| 2 | GRANT |
-| 3 | RELEASE |
+O funcionamento do sistema ocorre da seguinte forma: o cliente envia um REQUEST ao coordenador, que adiciona o processo na fila de espera. Quando o recurso está disponível, o coordenador envia um GRANT autorizando a entrada na região crítica. O cliente então escreve em `resultado.txt`, permanece na região crítica por um tempo aleatório definido pelo seu perfil e, ao finalizar, envia um RELEASE liberando o recurso para o próximo processo da fila.
 
-Exemplo:
+Os clientes podem utilizar diferentes perfis de retenção da região crítica:
+- `normal` → tempos curtos;
+- `guloso` → tempos longos;
+- `misto` → alternância entre tempos curtos e longos.
 
-```text
-1|3|00000000000
-```
-
----
-
-## Como funciona
-
-1. Cliente envia REQUEST.
-2. Coordenador coloca na fila.
-3. Coordenador envia GRANT para um cliente por vez.
-4. Cliente escreve em `resultado.txt`.
-5. Cliente espera `k` segundos.
-6. Cliente envia RELEASE.
-
----
-
-## Executar
-
-### Coordenador
+Para executar o coordenador:
 
 ```bash
 py coordinator.py
 ```
 
----
-
-### Cliente
-
-Exemplo:
+Exemplo de execução de um cliente:
 
 ```bash
-py client.py --id 1 -r 5 -k 1
+py client.py --id 1 -r 5 --perfil normal
 ```
 
-Parâmetros:
-- `--id` → identificador do processo
-- `-r` → número de repetições
-- `-k` → tempo dentro da região crítica
+Também é possível executar clientes com outros perfis:
 
----
-
-## Resultado esperado
-
-Arquivo `resultado.txt`:
-
-```text
-1 2026-05-21 14:30:01.042
-2 2026-05-21 14:30:02.113
-3 2026-05-21 14:30:03.201
+```bash
+py client.py --id 2 -r 5 --perfil guloso
 ```
 
-Cada processo deve escrever `r` vezes.
+O arquivo `resultado.txt` deve apresentar entradas ordenadas sem acessos simultâneos à região crítica, validando o funcionamento da exclusão mútua.

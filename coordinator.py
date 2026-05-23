@@ -22,7 +22,6 @@ from protocol import F, GRANT, NOME_POR_ID, RELEASE, REQUEST, decodificar, envia
 # --- estado compartilhado (RLock: tentar_conceder é chamado com lock já held) ---
 lock = threading.RLock()
 fila = deque()                    # pedidos FIFO (process_id)
-em_uso = None                     # processo na região crítica
 conexoes = {}                     # process_id -> socket
 sockets_ativos = []               # todos os sockets para select()
 atendimentos = defaultdict(int)   # quantas vezes cada processo recebeu GRANT
@@ -44,12 +43,10 @@ def registrar_log(direcao: str, msg_id: int, origem, destino) -> None:
 
 def tentar_conceder() -> None:
     """Concede ao primeiro da fila se o recurso está livre. Requer lock."""
-    global em_uso
     with lock:
-        if em_uso is not None or not fila:
+        if not fila:
             return
-        proximo = fila.popleft()
-        em_uso = proximo
+        proximo = fila[0]
         atendimentos[proximo] += 1
         conn = conexoes.get(proximo)
     if conn is None:
@@ -61,24 +58,25 @@ def tentar_conceder() -> None:
 
 def processar_mensagem(msg_id: int, process_id: int) -> None:
     """Trata REQUEST/RELEASE."""
-    global em_uso
 
     if msg_id == REQUEST:
         registrar_log("RECV", REQUEST, process_id, "coord")
         with lock:
-            print(f"[coord] REQUEST de {process_id} | fila={list(fila)} em_uso={em_uso}")
+            # Se a fila estiver vazia, o processo entra e já ganha acesso imediato
+            # Se já houver alguém, ele apenas entra no final da fila
             fila.append(process_id)
-        tentar_conceder()
+            if len(fila) == 1:
+                tentar_conceder()
 
     elif msg_id == RELEASE:
         registrar_log("RECV", RELEASE, process_id, "coord")
         print(f"[coord] RELEASE de {process_id}")
         with lock:
-            if em_uso == process_id:
-                em_uso = None
+            if fila[0] == process_id:
+                fila.popleaft()
+                tentar_conceder()
             else:
-                print(f"[coord] aviso: RELEASE de {process_id} com em_uso={em_uso}")
-        tentar_conceder()
+                print(f"[coord] aviso: RELEASE de {process_id} mas primeiro da fila é {list(fila)[0] if fila else 'vazia'}")
 
     else:
         print(f"[coord] mensagem ignorada: id={msg_id}")
@@ -153,7 +151,7 @@ def thread_interface() -> None:
 
         if cmd == "1":
             with lock:
-                print(f"Fila atual: {list(fila)} | em_uso={em_uso}")
+                print(f"Fila atual: {list(fila)}")
         elif cmd == "2":
             with lock:
                 if atendimentos:

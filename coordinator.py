@@ -175,11 +175,6 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Coordenador de exclusão mútua")
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=9000)
-    parser.add_argument(
-        "--no-ui",
-        action="store_true",
-        help="Desativa thread de interface (uso com launcher)",
-    )
     args = parser.parse_args()
 
     LOG_PATH.write_text("", encoding="utf-8")
@@ -194,13 +189,6 @@ def main() -> None:
     t2 = threading.Thread(target=thread_algoritmo, daemon=True)
     t1.start()
     t2.start()
-
-    # Thread de interface (comandos 1, 2, 3) — desligada com --no-ui
-    if not args.no_ui and sys.stdin.isatty():
-        t3 = threading.Thread(target=thread_interface, daemon=True)
-        t3.start()
-    else:
-        print("[coord] interface desativada")
 
     try:
         while rodando:

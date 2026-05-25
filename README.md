@@ -24,6 +24,14 @@ Os tipos utilizados são:
 
 O funcionamento do sistema ocorre da seguinte forma: o cliente envia um REQUEST ao coordenador, que adiciona o processo na fila de espera. Quando o recurso está disponível, o coordenador envia um GRANT autorizando a entrada na região crítica. O cliente então escreve em `resultado.txt`, permanece na região crítica por um tempo aleatório definido pelo seu perfil e, ao finalizar, envia um RELEASE liberando o recurso para o próximo processo da fila.
 
+O arquivo client.py aceita os seguintes parâmetros de execução:
+| Parâmetro | Descrição |
+|---|---|
+| -n | Quantidade de clientes criados |
+| -r | Quantidade de acessos à região crítica por cliente |
+| --perfil | Perfil de retenção da região crítica |
+
+
 Os clientes podem utilizar diferentes perfis de retenção da região crítica:
 - `normal` → tempos curtos;
 - `guloso` → tempos longos;
@@ -35,16 +43,16 @@ Para executar o coordenador:
 py coordinator.py
 ```
 
-Exemplo de execução de um cliente:
+Exemplo de execução de 3 cliente e 5 requisições cada:
 
 ```bash
-py client.py --id 1 -r 5 --perfil normal
+py client.py -n 3 -r 5 --perfil normal
 ```
 
 Também é possível executar clientes com outros perfis:
 
 ```bash
-py client.py --id 2 -r 5 --perfil guloso
+py client.py -n 3 -r 5 --perfil guloso
 ```
 
 O arquivo `resultado.txt` deve apresentar entradas ordenadas sem acessos simultâneos à região crítica, validando o funcionamento da exclusão mútua.

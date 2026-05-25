@@ -2,6 +2,7 @@ import argparse
 import random
 import socket
 import time
+import threading
 from datetime import datetime
 from pathlib import Path
 
@@ -31,7 +32,7 @@ def gerar_tempo(perfil: str) -> float:
     raise ValueError("Perfil inválido")
 
 
-def regiao_critica(process_id: int, perfil: str) -> None:
+def regiao_critica(process_id: int) -> None:
 
     agora = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
 
@@ -40,31 +41,84 @@ def regiao_critica(process_id: int, perfil: str) -> None:
     with RESULTADO.open("a", encoding="utf-8") as f:
         f.write(linha)
 
-    tempo = gerar_tempo(perfil)
+
+def thread_processo(
+    process_id: int,
+    host: str,
+    port: int,
+    repeticoes: int,
+    perfil: str
+) -> None:
+    
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+    sock.connect((host, port))
 
     print(
-        f"[proc {process_id}] "
-        f"RC ({perfil}): {agora} "
-        f"(sleep {tempo:.2f}s)"
+        f"[proc {process_id}] conectado "
+        f"(perfil={perfil})"
     )
 
-    time.sleep(tempo)
+    try:
 
+        for i in range(1, repeticoes + 1):
+
+            print(f"[proc {process_id}] {i}/{repeticoes} REQUEST")
+
+            enviar_socket(sock, REQUEST, process_id)
+
+            msg_id, pid = ler_socket(sock)
+
+            if msg_id != GRANT or pid != process_id:
+
+                print(
+                    f"[proc {process_id}] erro: "
+                    f"esperava GRANT, veio {msg_id}|{pid}"
+                )
+
+                break
+
+            regiao_critica(process_id)
+
+            agora = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
+            
+            tempo = gerar_tempo(perfil)
+
+            print(
+                f"[proc {process_id}] "
+                f"RC ({perfil}): {agora} "
+                f"(sleep {tempo:.2f}s)"
+            )
+            
+            time.sleep(tempo)
+
+            enviar_socket(sock, RELEASE, process_id)
+
+            print(f"[proc {process_id}] RELEASE")
+            
+            time.sleep(random.uniform(0.5, 2))
+
+    finally:
+
+        sock.close()
+
+        print(f"[proc {process_id}] terminou")
+    
 
 def main() -> None:
 
     parser = argparse.ArgumentParser(description="Processo cliente")
 
-    parser.add_argument(
-        "--id",
-        type=int,
-        required=True,
-        help="Identificador do processo"
-    )
-
     parser.add_argument("--host", default="127.0.0.1")
 
     parser.add_argument("--port", type=int, default=9000)
+
+    parser.add_argument(
+        "-n",
+        type=int,
+        default=3,
+        help="Quantidade de threads cliente"
+    )
 
     parser.add_argument(
         "-r",
@@ -82,45 +136,29 @@ def main() -> None:
 
     args = parser.parse_args()
 
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    threads = []
 
-    sock.connect((args.host, args.port))
+    for process_id in range(1, args.n + 1):
 
-    print(
-        f"[proc {args.id}] conectado "
-        f"(perfil={args.perfil})"
-    )
+        t = threading.Thread(
+            target=thread_processo,
+            args=(
+                process_id,
+                args.host,
+                args.port,
+                args.r,
+                args.perfil
+            )
+        )
 
-    try:
+        t.start()
 
-        for i in range(1, args.r + 1):
+        threads.append(t)
 
-            print(f"[proc {args.id}] {i}/{args.r} REQUEST")
+    for t in threads:
+        t.join()
 
-            enviar_socket(sock, REQUEST, args.id)
-
-            msg_id, pid = ler_socket(sock)
-
-            if msg_id != GRANT or pid != args.id:
-
-                print(
-                    f"[proc {args.id}] erro: "
-                    f"esperava GRANT, veio {msg_id}|{pid}"
-                )
-
-                break
-
-            regiao_critica(args.id, args.perfil)
-
-            print(f"[proc {args.id}] RELEASE")
-
-            enviar_socket(sock, RELEASE, args.id)
-
-    finally:
-
-        sock.close()
-
-        print(f"[proc {args.id}] terminou")
+    print("\nTodos os processos terminaram.")
 
 
 if __name__ == "__main__":

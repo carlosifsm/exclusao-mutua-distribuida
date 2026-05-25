@@ -185,9 +185,12 @@ def main() -> None:
 
     t1 = threading.Thread(target=thread_aceitar, args=(servidor,), daemon=True)
     t2 = threading.Thread(target=thread_algoritmo, daemon=True)
+    t3 = threading.Thread(target=thread_interface, daemon=True)
+
     t1.start()
     t2.start()
-
+    t3.start()
+    
     try:
         while rodando:
             time.sleep(0.2)

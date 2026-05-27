@@ -29,7 +29,7 @@ O arquivo client.py aceita os seguintes parâmetros de execução:
 |---|---|
 | -n | Quantidade de clientes criados |
 | -r | Quantidade de acessos à região crítica por cliente |
-| --perfil | Perfil de retenção da região crítica |
+| --perfil | Lista perfis de retenção da região crítica (repete o último para preencher até n) |
 
 
 Os clientes podem utilizar diferentes perfis de retenção da região crítica:
@@ -52,7 +52,7 @@ py client.py -n 3 -r 5 --perfil normal
 Também é possível executar clientes com outros perfis:
 
 ```bash
-py client.py -n 3 -r 5 --perfil guloso
+py client.py -n 3 -r 5 --perfil guloso normal
 ```
 
 O arquivo `resultado.txt` deve apresentar entradas ordenadas sem acessos simultâneos à região crítica, validando o funcionamento da exclusão mútua.

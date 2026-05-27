@@ -51,7 +51,6 @@ def thread_processo(
 ) -> None:
     
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-
     sock.connect((host, port))
 
     print(
@@ -81,9 +80,7 @@ def thread_processo(
             regiao_critica(process_id)
 
             agora = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
-            
             tempo = gerar_tempo(perfil)
-
             print(
                 f"[proc {process_id}] "
                 f"RC ({perfil}): {agora} "
@@ -93,7 +90,6 @@ def thread_processo(
             time.sleep(tempo)
 
             enviar_socket(sock, RELEASE, process_id)
-
             print(f"[proc {process_id}] RELEASE")
             
             time.sleep(random.uniform(0.5, 2))
@@ -129,12 +125,18 @@ def main() -> None:
 
     parser.add_argument(
         "--perfil",
+        nargs="+",
         choices=["normal", "guloso", "misto"],
-        default="normal",
-        help="Perfil de retenção da região crítica"
+        default=["normal"],
+        help="Lista perfis de retenção da região crítica (repete o último para preencher até n)"
     )
 
     args = parser.parse_args()
+
+    # repete o último para preencher
+    perfis = list(args.perfil)
+    while len(perfis) < args.n:
+        perfis.append(perfis[-1])
 
     threads = []
 
@@ -147,12 +149,11 @@ def main() -> None:
                 args.host,
                 args.port,
                 args.r,
-                args.perfil
+                perfis[process_id - 1]
             )
         )
 
         t.start()
-
         threads.append(t)
 
     for t in threads:

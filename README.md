@@ -43,6 +43,12 @@ Para executar o coordenador:
 py coordinator.py
 ```
 
+Para modo silencioso, sem imprimir eventos no terminal:
+
+```bash
+py coordinator.py --quiet
+```
+
 Exemplo de execução de 3 cliente e 5 requisições cada:
 
 ```bash

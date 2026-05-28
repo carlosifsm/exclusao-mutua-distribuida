@@ -26,6 +26,7 @@ conexoes = {}                     # process_id -> socket
 sockets_ativos = []               # todos os sockets para select()
 atendimentos = defaultdict(int)   # quantas vezes cada processo recebeu GRANT
 rodando = True
+VERBOSE = True
 
 LOG_PATH = Path("coordenador.log")
 log_lock = threading.Lock()
@@ -53,7 +54,8 @@ def tentar_conceder() -> None:
         return
     registrar_log("SEND", GRANT, "coord", proximo)
     enviar_socket(conn, GRANT, proximo)
-    print(f"[coord] GRANT -> processo {proximo}")
+    if VERBOSE:
+        print(f"[coord] GRANT -> processo {proximo}")
 
 
 def processar_mensagem(msg_id: int, process_id: int) -> None:
@@ -70,7 +72,8 @@ def processar_mensagem(msg_id: int, process_id: int) -> None:
 
     elif msg_id == RELEASE:
         registrar_log("RECV", RELEASE, process_id, "coord")
-        print(f"[coord] RELEASE de {process_id}")
+        if VERBOSE:
+            print(f"[coord] RELEASE de {process_id}")
         with lock:
             if fila[0] == process_id:
                 fila.popleft()
@@ -169,11 +172,19 @@ def thread_interface() -> None:
 
 def main() -> None:
     global rodando
+    global VERBOSE
 
     parser = argparse.ArgumentParser(description="Coordenador de exclusão mútua")
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=9000)
+    parser.add_argument(
+        "--quiet",
+        action="store_true",
+        help="Desabilita mensagens no console"
+    )
     args = parser.parse_args()
+
+    VERBOSE = not args.quiet
 
     LOG_PATH.write_text("", encoding="utf-8")
 

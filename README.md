@@ -52,13 +52,13 @@ py coordinator.py --quiet
 Exemplo de execução de 3 cliente e 5 requisições cada:
 
 ```bash
-py client.py -n 3 -r 5 --perfil normal
+py client.py -n 4 -r 5 --perfil normal
 ```
 
 Também é possível executar clientes com outros perfis:
 
 ```bash
-py client.py -n 3 -r 5 --perfil guloso normal
+py client.py -n 4 -r 5 --perfil guloso normal
 ```
 
 O arquivo `resultado.txt` deve apresentar entradas ordenadas sem acessos simultâneos à região crítica, validando o funcionamento da exclusão mútua.

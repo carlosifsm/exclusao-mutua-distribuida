@@ -18,16 +18,16 @@ def gerar_tempo(perfil: str) -> float:
     """
 
     if perfil == "normal":
-        return random.uniform(1, 3)
+        return 2
 
     if perfil == "guloso":
-        return random.uniform(5, 10)
+        return random.uniform(3, 6)
 
     if perfil == "misto":
         # às vezes curto, às vezes muito longo
         if random.random() < 0.7:
-            return random.uniform(1, 3)
-        return random.uniform(6, 12)
+            return 2
+        return random.uniform(3, 6)
 
     raise ValueError("Perfil inválido")
 
@@ -92,7 +92,7 @@ def thread_processo(
             enviar_socket(sock, RELEASE, process_id)
             print(f"[proc {process_id}] RELEASE")
             
-            time.sleep(random.uniform(0.5, 2))
+            time.sleep(random.uniform(1, 5))
 
     finally:
 

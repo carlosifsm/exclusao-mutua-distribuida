@@ -17,7 +17,7 @@ from collections import defaultdict, deque
 from datetime import datetime
 from pathlib import Path
 
-from protocol import F, GRANT, NOME_POR_ID, RELEASE, REQUEST, decodificar, enviar_socket
+from protocol import F, GRANT, NOME_POR_ID, RELEASE, REQUEST, decodificar, enviar_socket, ler_socket
 
 # --- estado compartilhado (RLock: tentar_conceder é chamado com lock já held) ---
 lock = threading.RLock()
@@ -42,16 +42,13 @@ def registrar_log(direcao: str, msg_id: int, origem, destino) -> None:
             f.write(linha)
 
 
-def tentar_conceder() -> None:
+def enviar_grant() -> None:
     """Concede ao primeiro da fila se o recurso está livre. Requer lock."""
     with lock:
-        if not fila:
-            return
         proximo = fila[0]
         atendimentos[proximo] += 1
         conn = conexoes.get(proximo)
-    if conn is None:
-        return
+        
     registrar_log("SEND", GRANT, "coord", proximo)
     enviar_socket(conn, GRANT, proximo)
     if VERBOSE:
@@ -63,23 +60,22 @@ def processar_mensagem(msg_id: int, process_id: int) -> None:
 
     if msg_id == REQUEST:
         registrar_log("RECV", REQUEST, process_id, "coord")
+
         with lock:
-            # Se a fila estiver vazia, o processo entra e já ganha acesso imediato
-            # Se já houver alguém, ele apenas entra no final da fila
             fila.append(process_id)
             if len(fila) == 1:
-                tentar_conceder()
+                enviar_grant()
+            
 
     elif msg_id == RELEASE:
         registrar_log("RECV", RELEASE, process_id, "coord")
         if VERBOSE:
             print(f"[coord] RELEASE de {process_id}")
+
         with lock:
-            if fila[0] == process_id:
-                fila.popleft()
-                tentar_conceder()
-            else:
-                print(f"[coord] aviso: RELEASE de {process_id} mas primeiro da fila é {list(fila)[0] if fila else 'vazia'}")
+            fila.popleft()
+            if len(fila) > 0:
+                enviar_grant()
 
     else:
         print(f"[coord] mensagem ignorada: id={msg_id}")
@@ -116,13 +112,7 @@ def thread_algoritmo() -> None:
 
         for conn in prontos + erros:
             try:
-                dados = b""
-                while len(dados) < F:
-                    pedaco = conn.recv(F - len(dados))
-                    if not pedaco:
-                        raise ConnectionError()
-                    dados += pedaco
-                msg_id, process_id = decodificar(dados)
+                msg_id, process_id = ler_socket(conn)
             except (ConnectionError, OSError):
                 remover_socket(conn)
                 continue

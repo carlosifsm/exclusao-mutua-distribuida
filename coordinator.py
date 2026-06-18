@@ -29,7 +29,6 @@ rodando = True
 VERBOSE = True
 
 LOG_PATH = Path("coordenador.log")
-log_lock = threading.Lock()
 
 
 def registrar_log(direcao: str, msg_id: int, origem, destino) -> None:
@@ -37,22 +36,21 @@ def registrar_log(direcao: str, msg_id: int, origem, destino) -> None:
     instante = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
     tipo = NOME_POR_ID[msg_id]
     linha = f"{instante} {direcao} {tipo} origem={origem} destino={destino}\n"
-    with log_lock:
-        with LOG_PATH.open("a", encoding="utf-8") as f:
-            f.write(linha)
+    
+    with LOG_PATH.open("a", encoding="utf-8") as f:
+        f.write(linha)
 
 
-def enviar_grant() -> None:
-    """Concede ao primeiro da fila se o recurso está livre. Requer lock."""
+def enviar_grant(process: int) -> None:
+    """Envia o GRANT e atualiza atendimentos"""
     with lock:
-        proximo = fila[0]
-        atendimentos[proximo] += 1
-        conn = conexoes.get(proximo)
+        atendimentos[process] += 1
+        conn = conexoes.get(process)
         
-    registrar_log("SEND", GRANT, "coord", proximo)
-    enviar_socket(conn, GRANT, proximo)
+    registrar_log("SEND", GRANT, "coord", process)
+    enviar_socket(conn, GRANT, process)
     if VERBOSE:
-        print(f"[coord] GRANT -> processo {proximo}")
+        print(f"[coord] GRANT -> processo {process}")
 
 
 def processar_mensagem(msg_id: int, process_id: int) -> None:
@@ -62,9 +60,9 @@ def processar_mensagem(msg_id: int, process_id: int) -> None:
         registrar_log("RECV", REQUEST, process_id, "coord")
 
         with lock:
+            if not fila: # empty
+                enviar_grant(process_id)
             fila.append(process_id)
-            if len(fila) == 1:
-                enviar_grant()
             
 
     elif msg_id == RELEASE:
@@ -74,8 +72,9 @@ def processar_mensagem(msg_id: int, process_id: int) -> None:
 
         with lock:
             fila.popleft()
-            if len(fila) > 0:
-                enviar_grant()
+            if fila:
+                process_id = fila[0]
+                enviar_grant(process_id)
 
     else:
         print(f"[coord] mensagem ignorada: id={msg_id}")

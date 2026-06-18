@@ -10,6 +10,7 @@ O projeto é composto pelos seguintes arquivos:
 | `coordinator.py` | Coordenador central |
 | `client.py` | Processos clientes |
 | `resultado.txt` | Arquivo compartilhado gerado durante a execução |
+| `coordenador.log` | Arquivo das mensagens recebidas e enviadas pelo coordenador gerado durante a execução |
 
 As mensagens seguem o formato:
 
@@ -29,13 +30,6 @@ O arquivo client.py aceita os seguintes parâmetros de execução:
 |---|---|
 | -n | Quantidade de clientes criados |
 | -r | Quantidade de acessos à região crítica por cliente |
-| --perfil | Lista perfis de retenção da região crítica (repete o último para preencher até n) |
-
-
-Os clientes podem utilizar diferentes perfis de retenção da região crítica:
-- `normal` → tempos curtos;
-- `guloso` → tempos longos;
-- `misto` → alternância entre tempos curtos e longos.
 
 Para executar o coordenador:
 
@@ -49,16 +43,12 @@ Para modo silencioso, sem imprimir eventos no terminal:
 py coordinator.py --quiet
 ```
 
+O arquivo `coordenador.log` apresenta as mensagens recebidas e enviadas pelo coordenador.
+
 Exemplo de execução de 3 cliente e 5 requisições cada:
 
 ```bash
-py client.py -n 4 -r 5 --perfil normal
-```
-
-Também é possível executar clientes com outros perfis:
-
-```bash
-py client.py -n 4 -r 5 --perfil guloso normal
+py client.py -n 4 -r 5
 ```
 
 O arquivo `resultado.txt` deve apresentar entradas ordenadas sem acessos simultâneos à região crítica, validando o funcionamento da exclusão mútua.
